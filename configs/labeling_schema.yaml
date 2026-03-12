@@ -1,0 +1,270 @@
+# ============================================================
+# 幽默感標註準則 (Labeling Schema)
+# ============================================================
+# 版本: 1.0
+# 用途: 作為人工標註的統一標準，確保標註一致性
+# 建議: 正式標註前，先讓 2-3 位標註者用此準則獨立標註 30 筆，
+#        計算 Inter-Annotator Agreement (Cohen's Kappa ≥ 0.7)
+
+# ── 1. 幽默評分量表 (1-5 分) ─────────────────────────────
+
+humor_score:
+  scale: 5
+  description: "觀眾對笑點的反應強度與幽默品質綜合評估"
+
+  levels:
+    1:
+      label: "完全不好笑"
+      description: |
+        - 完全沒有笑聲或極微弱反應
+        - 邏輯結構不完整（無明確的 Setup-Punchline）
+        - 或者觀眾反應明顯是尷尬/禮貌笑
+      indicators:
+        - 笑聲分貝 < -40 dB
+        - 笑聲持續 < 0.5 秒
+        - "觀眾表情無明顯變化"
+      example: "段子結構散亂，觀眾幾乎無反應"
+
+    2:
+      label: "略有趣味"
+      description: |
+        - 微弱笑聲，少數觀眾有反應
+        - 有基本的 Setup-Punchline 結構，但反轉力道不足
+        - 可能是「會心一笑」但非爆笑
+      indicators:
+        - 笑聲分貝 -40 ~ -30 dB
+        - 笑聲持續 0.5-1.5 秒
+        - "少數觀眾微笑"
+      example: "能看出意圖，但 Punchline 可預測性過高"
+
+    3:
+      label: "中等好笑"
+      description: |
+        - 明顯笑聲，多數觀眾有反應
+        - 完整的 Setup-Punchline 結構，有一定的反轉
+        - 這是一個「合格」的段子
+      indicators:
+        - 笑聲分貝 -30 ~ -20 dB
+        - 笑聲持續 1.5-3.0 秒
+        - "多數觀眾有明顯笑容"
+      example: "結構完整，反轉有效，觀眾普遍覺得好笑"
+
+    4:
+      label: "很好笑"
+      description: |
+        - 爆笑，幾乎全場觀眾大笑
+        - 精巧的結構（如 Rule of Three、Callback）
+        - 反轉出乎意料，語言精準
+      indicators:
+        - 笑聲分貝 -20 ~ -10 dB
+        - 笑聲持續 3.0-6.0 秒
+        - "觀眾前傾、拍手、大笑"
+      example: "高水準段子，Punchline 令人意外且邏輯完整"
+
+    5:
+      label: "炸場級別"
+      description: |
+        - 全場爆笑，觀眾反應持續且強烈
+        - 可能伴隨掌聲、跺腳、「再來一次」呼聲
+        - 通常是 Special 級別的經典段子
+        - 可能引發「笑到無法呼吸」的生理反應
+      indicators:
+        - 笑聲分貝 > -10 dB
+        - 笑聲持續 > 6.0 秒
+        - "觀眾大笑 + 掌聲，可能有人拍桌"
+      example: "名場面級別，可以成為脫口秀精華片段"
+
+# ── 2. 幽默類型分類法 (Humor Type Taxonomy) ──────────────
+
+humor_types:
+  description: "基於 GTVH 理論 + 脫口秀實務的分類系統"
+
+  categories:
+    pun:
+      label: "諧音/雙關 (Pun)"
+      description: "利用語音或語意相似性製造歧義"
+      example: "我去看牙醫，他說你需要『拔智齒』。我說：我已經很蠢了，拔掉智慧不是更慘嗎？"
+      gtvh_mechanism: "語言 (Language)"
+
+    misdirection:
+      label: "誤導/反轉 (Misdirection)"
+      description: "設置期望後突然轉向，核心笑點來自預期違反"
+      example: "我終於存夠了錢... 可以負擔得起免費試用期結束後的Netflix。"
+      gtvh_mechanism: "腳本對立 (Script Opposition)"
+
+    observational:
+      label: "觀察式幽默 (Observational)"
+      description: "指出日常生活中的荒謬之處，引發共鳴"
+      example: "台灣的天氣預報永遠是對的——因為它說『多雲時晴，偶陣雨』包含了所有可能。"
+      gtvh_mechanism: "情境 (Situation)"
+
+    self_deprecation:
+      label: "自嘲 (Self-Deprecation)"
+      description: "以自己為對象的幽默，降低攻擊性"
+      example: "我的長相就是那種... 走在路上不會被搭訕，但考試會被懷疑作弊的程度。"
+      gtvh_mechanism: "目標 (Target)"
+
+    absurdist:
+      label: "荒謬 (Absurdist)"
+      description: "以不合邏輯或超現實的場景製造喜感"
+      example: "如果魚也有LinkedIn，牠們的技能大概會寫『專精在水中不溺水』。"
+      gtvh_mechanism: "腳本對立 (Script Opposition)"
+
+    callback:
+      label: "回呼/伏筆 (Callback)"
+      description: "引用前面段子中的元素，製造驚喜的連結"
+      example: "（後段引用前段元素）...就像我剛才說的那個牙醫..."
+      gtvh_mechanism: "敘事策略 (Narrative Strategy)"
+
+    satire:
+      label: "諷刺 (Satire)"
+      description: "針對社會現象或權力結構的批判性幽默"
+      example: "政府說要打房，結果打的是想買房的人的信心。"
+      gtvh_mechanism: "目標 (Target) + 情境 (Situation)"
+
+    wordplay:
+      label: "語言遊戲 (Wordplay)"
+      description: "利用語言的多義性、節奏感、押韻等特性"
+      example: "他說他是斜槓青年。我說那你是不是也斜著睡覺？"
+      gtvh_mechanism: "語言 (Language)"
+
+    dark_humor:
+      label: "黑色幽默 (Dark Humor)"
+      description: "以嚴肅或禁忌的主題製造笑點"
+      example: "（涉及生死、疾病等嚴肅話題的幽默處理）"
+      gtvh_mechanism: "腳本對立 + 目標"
+      note: "需搭配冒犯性評估"
+
+    physical:
+      label: "肢體/動作 (Physical)"
+      description: "依賴表情、動作、聲音模仿等非語言元素"
+      example: "（模仿某人走路姿勢或說話方式）"
+      gtvh_mechanism: "敘事策略 (Narrative Strategy)"
+      note: "文字逐字稿可能無法完整捕捉"
+
+    personal_story:
+      label: "個人故事型 (Personal Story)"
+      description: "基於自身真實或渲染過的經歷，帶入觀眾情緒"
+      example: "我小時候我媽打我從來不用手..."
+      gtvh_mechanism: "敘事策略 (Narrative Strategy)"
+
+    critical:
+      label: "批判型 (Critical)"
+      description: "針對特定事物、現象或人物進行有邏輯的猛烈攻擊"
+      example: "有些人真的很愛在限動發黑底小字，你以為大家都帶顯微鏡出門嗎？"
+      gtvh_mechanism: "目標 (Target)"
+
+    performance:
+      label: "表演型 (Performance)"
+      description: "純文本不好笑，高度依賴演員的節奏、語氣與怪咖演繹"
+      example: "（用極度誇張的語氣）『先生，請問你需要加購塑膠袋嗎！？』"
+      gtvh_mechanism: "展示 (Presentation)"
+
+    oneliner:
+      label: "短笑話 (One-liner)"
+      description: "一句話內完成 Setup 與 Punchline 的光速反轉"
+      example: "我爺爺是在睡夢中安詳離世的，不像他車上的那些乘客。"
+      gtvh_mechanism: "腳本對立 (Script Opposition)"
+
+# ── 3. 冒犯性分級 (Offensiveness Scale) ──────────────────
+
+offensiveness:
+  scale: 5
+  description: "評估段子的冒犯性等級，用於 Safety-Humor 權衡"
+
+  levels:
+    0:
+      label: "無冒犯性"
+      description: "完全安全，適合所有場合"
+      example: "觀察日常生活的幽默"
+
+    1:
+      label: "輕微敏感"
+      description: "涉及輕微的刻板印象或自嘲"
+      example: "自嘲身材、年齡"
+      action: "保留，標記為自嘲"
+
+    2:
+      label: "中等敏感"
+      description: "涉及社會議題但非攻擊性"
+      example: "政治諷刺、世代差異"
+      action: "保留，但需標記目標群體"
+
+    3:
+      label: "較高敏感"
+      description: "可能讓部分群體不適"
+      example: "涉及特定族群、宗教、性別的幽默"
+      action: "需要仔細評估 Benign Violation 分數"
+
+    4:
+      label: "高度敏感"
+      description: "有明確的攻擊性或歧視傾向"
+      example: "針對弱勢群體的貶低性笑話"
+      action: "建議降權或排除"
+
+    5:
+      label: "極度冒犯"
+      description: "涉及仇恨言論、暴力煽動等"
+      example: "任何形式的仇恨言論"
+      action: "必須排除"
+
+# ── 4. 標註欄位定義 ────────────────────────────────────
+
+annotation_fields:
+  required:
+    - field: humor_score
+      type: int
+      range: [1, 5]
+      description: "幽默評分"
+
+    - field: humor_type
+      type: categorical
+      options: [pun, misdirection, observational, self_deprecation, absurdist, callback, satire, wordplay, dark_humor, physical, personal_story, critical, performance, oneliner]
+      description: "幽默類型（可複選，以主要類型為首）"
+
+    - field: offensiveness
+      type: int
+      range: [0, 5]
+      description: "冒犯性等級"
+
+  optional:
+    - field: setup_correct
+      type: boolean
+      description: "自動對齊的 Setup 邊界是否正確"
+
+    - field: punchline_correct
+      type: boolean
+      description: "自動對齊的 Punchline 邊界是否正確"
+
+    - field: corrected_setup
+      type: text
+      description: "修正後的 Setup 文本"
+
+    - field: corrected_punchline
+      type: text
+      description: "修正後的 Punchline 文本"
+
+    - field: gtvh_script_opposition
+      type: text
+      description: "GTVH 腳本對立描述"
+
+    - field: notes
+      type: text
+      description: "標註者備註"
+
+# ── 5. 標註品質控制指標 ─────────────────────────────────
+
+quality_control:
+  inter_annotator_agreement:
+    metric: "Cohen's Kappa / Fleiss' Kappa"
+    threshold: 0.7
+    description: "正式標註前，至少 2 位標註者需達到 κ ≥ 0.7"
+
+  small_batch_size: 200
+  validation_batch_size: 50
+
+  error_analysis_metrics:
+    - "False Positive Rate: 機器標為好笑但實際不好笑"
+    - "False Negative Rate: 機器標為不好笑但實際好笑"
+    - "Boundary Error Rate: 自動對齊 Setup/Punchline 邊界錯誤率"
+    - "Type Classification Accuracy: 自動 vs 人工幽默類型一致率"

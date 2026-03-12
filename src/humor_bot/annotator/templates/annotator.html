@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎤 Humor Bot — 標註工具</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --bg-card-hover: #222240;
+            --bg-glass: rgba(26, 26, 46, 0.7);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-active: rgba(139, 92, 246, 0.5);
+            --text-primary: #f0f0f5;
+            --text-secondary: #8b8ba3;
+            --text-muted: #5a5a72;
+            --accent: #8b5cf6;
+            --accent-light: #a78bfa;
+            --accent-dim: rgba(139, 92, 246, 0.15);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --gold: #fbbf24;
+            --score-1: #6b7280;
+            --score-2: #3b82f6;
+            --score-3: #f59e0b;
+            --score-4: #f97316;
+            --score-5: #ef4444;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── Header ────────────────────────────── */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 28px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--accent-light), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header .video-name {
+            font-size: 13px;
+            color: var(--text-secondary);
+            padding: 4px 12px;
+            background: var(--bg-card);
+            border-radius: 20px;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* ── Progress Bar ──────────────────────── */
+        .progress-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .progress-bar {
+            width: 200px;
+            height: 6px;
+            background: var(--bg-card);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            border-radius: 3px;
+            transition: width 0.4s ease;
+        }
+        .progress-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            min-width: 60px;
+        }
+
+        /* ── Buttons ───────────────────────────── */
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:hover { 
+            background: var(--bg-card-hover);
+            border-color: var(--border-active);
+            transform: translateY(-1px);
+        }
+        .btn-accent {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        .btn-accent:hover {
+            background: var(--accent-light);
+            border-color: var(--accent-light);
+        }
+        .btn-success {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: var(--success);
+            color: var(--success);
+        }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+        /* ── Main Layout ───────────────────────── */
+        .main {
+            display: grid;
+            grid-template-columns: 300px 1fr 340px;
+            height: calc(100vh - 57px);
+        }
+
+        /* ── Left Panel: Segment List ──────────── */
+        .segment-list {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            padding: 12px;
+        }
+        .segment-list::-webkit-scrollbar { width: 4px; }
+        .segment-list::-webkit-scrollbar-track { background: transparent; }
+        .segment-list::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 2px; }
+
+        .list-header {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 8px 4px;
+            margin-bottom: 8px;
+        }
+
+        .segment-item {
+            padding: 10px 12px;
+            margin-bottom: 4px;
+            border-radius: var(--radius-sm);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+        .segment-item:hover {
+            background: var(--bg-card);
+            border-color: var(--border);
+        }
+        .segment-item.active {
+            background: var(--accent-dim);
+            border-color: var(--border-active);
+        }
+        .segment-item.annotated::after {
+            content: "✓";
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            color: var(--success);
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .segment-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: 'Inter', monospace;
+            margin-bottom: 4px;
+        }
+        .segment-text-preview {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .segment-badges {
+            display: flex;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        .badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .badge-score {
+            color: white;
+        }
+        .badge-laugh {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--gold);
+        }
+
+        /* ── Center Panel: Viewer ──────────────── */
+        .viewer {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-primary);
+            overflow: hidden;
+        }
+
+        .frame-container {
+            flex: 0 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+            min-height: 360px;
+            max-height: 420px;
+            position: relative;
+            overflow: hidden;
+        }
+        .frame-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .frame-timestamp {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: monospace;
+            backdrop-filter: blur(10px);
+        }
+        .frame-placeholder {
+            color: var(--text-muted);
+            font-size: 48px;
+        }
+
+        .transcript-viewer {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 32px;
+        }
+        .transcript-viewer::-webkit-scrollbar { width: 4px; }
+        .transcript-viewer::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 2px; }
+
+        .current-segment {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .current-segment .label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .current-segment .text {
+            font-size: 20px;
+            font-weight: 400;
+            line-height: 1.8;
+            color: var(--text-primary);
+        }
+        .current-segment .meta {
+            margin-top: 12px;
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .context-segments {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .context-seg {
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+        }
+        .context-seg .ctx-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .context-seg .ctx-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* ── Navigation ────────────────────────── */
+        .nav-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 24px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+        .nav-bar .nav-info {
+            font-size: 13px;
+            color: var(--text-secondary);
+            min-width: 100px;
+            text-align: center;
+        }
+
+        /* ── Right Panel: Annotation ───────────── */
+        .annotation-panel {
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .annotation-panel::-webkit-scrollbar { width: 4px; }
+        .annotation-panel::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 2px; }
+
+        .panel-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+        }
+        .panel-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Score Buttons */
+        .score-buttons {
+            display: flex;
+            gap: 6px;
+        }
+        .score-btn {
+            flex: 1;
+            padding: 12px 8px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+        }
+        .score-btn:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+            transform: translateY(-2px);
+        }
+        .score-btn.selected {
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .score-btn[data-score="1"].selected { background: var(--score-1); border-color: var(--score-1); }
+        .score-btn[data-score="2"].selected { background: var(--score-2); border-color: var(--score-2); }
+        .score-btn[data-score="3"].selected { background: var(--score-3); border-color: var(--score-3); }
+        .score-btn[data-score="4"].selected { background: var(--score-4); border-color: var(--score-4); }
+        .score-btn[data-score="5"].selected { background: var(--score-5); border-color: var(--score-5); }
+        .score-label {
+            font-size: 9px;
+            margin-top: 4px;
+            color: inherit;
+        }
+
+        /* Humor Type */
+        .type-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        .type-btn {
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+        }
+        .type-btn:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+        .type-btn.selected {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+            color: var(--accent-light);
+        }
+
+        /* Toggle Buttons */
+        .toggle-row {
+            display: flex;
+            gap: 8px;
+        }
+        .toggle-btn {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+        }
+        .toggle-btn.active {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+            color: var(--accent-light);
+        }
+
+        /* Offensive Slider */
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .slider-container input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            background: var(--bg-primary);
+            border-radius: 3px;
+            outline: none;
+        }
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 2px solid var(--bg-card);
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+        }
+        .slider-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            min-width: 24px;
+            text-align: center;
+        }
+
+        /* Notes */
+        .notes-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            resize: vertical;
+            min-height: 60px;
+            transition: var(--transition);
+        }
+        .notes-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Auto Features */
+        .auto-features {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .feature-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+        .feature-row .label {
+            color: var(--text-muted);
+        }
+        .feature-row .value {
+            color: var(--text-primary);
+            font-weight: 500;
+            font-family: monospace;
+        }
+        .feature-bar {
+            width: 80px;
+            height: 4px;
+            background: var(--bg-primary);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .feature-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        /* Keyboard shortcuts */
+        .shortcuts {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.8;
+        }
+        kbd {
+            display: inline-block;
+            padding: 2px 6px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 10px;
+            font-family: monospace;
+            font-weight: 600;
+            color: var(--text-secondary);
+            min-width: 20px;
+            text-align: center;
+        }
+
+        /* ── Export Panel ──────────────────────── */
+        .export-section {
+            margin-top: auto;
+        }
+        .export-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .export-btn {
+            width: 100%;
+            text-align: left;
+        }
+
+        /* ── Toast ─────────────────────────────── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 13px;
+            box-shadow: var(--shadow);
+            transform: translateY(80px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast.success { border-left: 3px solid var(--success); }
+        .toast.warning { border-left: 3px solid var(--warning); }
+
+        /* ── Loading ───────────────────────────── */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        .loading span { animation: pulse 1.5s infinite; }
+
+        /* ── Responsive ────────────────────────── */
+        @media (max-width: 1200px) {
+            .main { grid-template-columns: 250px 1fr 300px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1>🎤 Humor Bot Annotator</h1>
+            <span class="video-name" id="videoName">載入中...</span>
+        </div>
+        <div class="header-right">
+            <div class="progress-wrapper">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <span class="progress-text" id="progressText">0 / 0</span>
+            </div>
+            <button class="btn btn-success" onclick="saveAll()">💾 儲存</button>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="main">
+        <!-- Left: Segment List -->
+        <div class="segment-list" id="segmentList">
+            <div class="list-header">📝 逐字稿</div>
+            <div class="loading"><span>載入中...</span></div>
+        </div>
+
+        <!-- Center: Viewer -->
+        <div class="viewer">
+            <div class="frame-container" id="frameContainer">
+                <div class="frame-placeholder">🎬</div>
+            </div>
+
+            <div class="transcript-viewer" id="transcriptViewer">
+                <div class="context-segments" id="contextSegments"></div>
+                <div class="current-segment" id="currentSegment">
+                    <div class="label">目前片段</div>
+                    <div class="text" id="currentText">選擇一個片段開始標註</div>
+                    <div class="meta" id="currentMeta"></div>
+                </div>
+                <div class="context-segments" id="contextAfter"></div>
+            </div>
+
+            <div class="nav-bar">
+                <button class="btn" onclick="prevSegment()">⬅ 上一段</button>
+                <span class="nav-info" id="navInfo">—</span>
+                <button class="btn" onclick="nextSegment()">下一段 ➡</button>
+                <button class="btn btn-accent" onclick="nextUnannotated()">⏩ 下一個未標</button>
+            </div>
+        </div>
+
+        <!-- Right: Annotation Panel -->
+        <div class="annotation-panel">
+            <!-- Humor Score -->
+            <div class="panel-section">
+                <div class="panel-section-title">⭐ 好笑程度</div>
+                <div class="score-buttons" id="scoreButtons">
+                    <button class="score-btn" data-score="1" onclick="setScore(1)">
+                        1<div class="score-label">冷場</div>
+                    </button>
+                    <button class="score-btn" data-score="2" onclick="setScore(2)">
+                        2<div class="score-label">微笑</div>
+                    </button>
+                    <button class="score-btn" data-score="3" onclick="setScore(3)">
+                        3<div class="score-label">好笑</div>
+                    </button>
+                    <button class="score-btn" data-score="4" onclick="setScore(4)">
+                        4<div class="score-label">大笑</div>
+                    </button>
+                    <button class="score-btn" data-score="5" onclick="setScore(5)">
+                        5<div class="score-label">炸場</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Humor Type -->
+            <div class="panel-section">
+                <div class="panel-section-title">🎭 幽默類型</div>
+                <div class="type-grid" id="typeGrid">
+                    <button class="type-btn" data-type="sarcasm" onclick="setType('sarcasm')">😏 諷刺</button>
+                    <button class="type-btn" data-type="self_deprecation" onclick="setType('self_deprecation')">🤷 自嘲</button>
+                    <button class="type-btn" data-type="pun" onclick="setType('pun')">🔤 諧音</button>
+                    <button class="type-btn" data-type="misdirection" onclick="setType('misdirection')">🔀 誤導</button>
+                    <button class="type-btn" data-type="exaggeration" onclick="setType('exaggeration')">📢 誇張</button>
+                    <button class="type-btn" data-type="observational" onclick="setType('observational')">👀 觀察</button>
+                    <button class="type-btn" data-type="callback" onclick="setType('callback')">🔁 回扣</button>
+                    <button class="type-btn" data-type="absurd" onclick="setType('absurd')">🤪 荒謬</button>
+                    <button class="type-btn" data-type="wordplay" onclick="setType('wordplay')">✍️ 文字遊戲</button>
+                    <button class="type-btn" data-type="physical" onclick="setType('physical')">🏃 肢體</button>
+                </div>
+            </div>
+
+            <!-- Structure -->
+            <div class="panel-section">
+                <div class="panel-section-title">🏗️ 段子結構</div>
+                <div class="toggle-row">
+                    <button class="toggle-btn" id="toggleSetup" onclick="toggleSetup()">📌 鋪陳 (Setup)</button>
+                    <button class="toggle-btn" id="togglePunch" onclick="togglePunch()">💥 笑點 (Punch)</button>
+                </div>
+            </div>
+
+            <!-- Offensive Level -->
+            <div class="panel-section">
+                <div class="panel-section-title">⚠️ 冒犯程度</div>
+                <div class="slider-container">
+                    <span style="font-size: 12px; color: var(--text-muted);">安全</span>
+                    <input type="range" id="offensiveSlider" min="0" max="5" value="0" oninput="setOffensive(this.value)">
+                    <span class="slider-value" id="offensiveValue">0</span>
+                </div>
+            </div>
+
+            <!-- Auto Features -->
+            <div class="panel-section">
+                <div class="panel-section-title">🤖 自動偵測特徵</div>
+                <div class="auto-features">
+                    <div class="feature-row">
+                        <span class="label">笑聲信心</span>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div class="feature-bar">
+                                <div class="feature-bar-fill" id="laughBar" style="width:0%;background:var(--gold);"></div>
+                            </div>
+                            <span class="value" id="laughConf">—</span>
+                        </div>
+                    </div>
+                    <div class="feature-row">
+                        <span class="label">笑聲強度</span>
+                        <span class="value" id="laughDb">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="panel-section">
+                <div class="panel-section-title">📝 備註</div>
+                <textarea class="notes-input" id="notesInput" placeholder="輸入備註..." oninput="setNotes(this.value)"></textarea>
+            </div>
+
+            <!-- Shortcuts -->
+            <div class="panel-section">
+                <div class="panel-section-title">⌨️ 快捷鍵</div>
+                <div class="shortcuts">
+                    <kbd>1</kbd>-<kbd>5</kbd> 好笑分數 &nbsp;
+                    <kbd>←</kbd><kbd>→</kbd> 切換片段<br>
+                    <kbd>S</kbd> 標記鋪陳 &nbsp;
+                    <kbd>P</kbd> 標記笑點 &nbsp;
+                    <kbd>N</kbd> 下一未標<br>
+                    <kbd>Ctrl+S</kbd> 儲存
+                </div>
+            </div>
+
+            <!-- Export -->
+            <div class="panel-section export-section">
+                <div class="panel-section-title">📤 匯出資料</div>
+                <div class="export-buttons">
+                    <button class="btn export-btn" onclick="exportData('sft')">🎓 SFT 指令微調（鋪陳-笑點對）</button>
+                    <button class="btn export-btn" onclick="exportData('rm')">⚖️ RM 成對比較資料</button>
+                    <button class="btn export-btn" onclick="exportData('gold')">🏆 Gold Set 金標測試集</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+    // ── State ──────────────────────────────────
+    let segments = [];
+    let currentIdx = -1;
+    let frameCache = {};
+
+    // ── Init ────────────────────────────────────
+    async function init() {
+        try {
+            const info = await fetch('/api/info').then(r => r.json());
+            document.getElementById('videoName').textContent = info.video_name;
+            updateProgress(info.annotated_count, info.total_segments);
+
+            segments = await fetch('/api/segments').then(r => r.json());
+            renderSegmentList();
+
+            if (segments.length > 0) {
+                selectSegment(0);
+            }
+        } catch (e) {
+            showToast('連線失敗: ' + e.message, 'warning');
+        }
+    }
+
+    // ── Segment List ────────────────────────────
+    function renderSegmentList() {
+        const list = document.getElementById('segmentList');
+        list.innerHTML = '<div class="list-header">📝 逐字稿 (' + segments.length + ' 段)</div>';
+
+        segments.forEach((seg, i) => {
+            const el = document.createElement('div');
+            el.className = 'segment-item' + (seg.annotated ? ' annotated' : '') + (i === currentIdx ? ' active' : '');
+            el.onclick = () => selectSegment(i);
+
+            let badges = '';
+            if (seg.annotated && seg.humor_score > 0) {
+                const colors = ['', 'var(--score-1)', 'var(--score-2)', 'var(--score-3)', 'var(--score-4)', 'var(--score-5)'];
+                badges += `<span class="badge badge-score" style="background:${colors[seg.humor_score]}">★${seg.humor_score}</span>`;
+            }
+            if (seg.laughter_confidence > 0.5) {
+                badges += '<span class="badge badge-laugh">😂</span>';
+            }
+
+            el.innerHTML = `
+                <div class="segment-time">${formatTime(seg.start)} → ${formatTime(seg.end)}</div>
+                <div class="segment-text-preview">${escapeHtml(seg.text)}</div>
+                ${badges ? '<div class="segment-badges">' + badges + '</div>' : ''}
+            `;
+            list.appendChild(el);
+        });
+    }
+
+    // ── Select Segment ──────────────────────────
+    async function selectSegment(idx) {
+        if (idx < 0 || idx >= segments.length) return;
+        currentIdx = idx;
+        const seg = segments[idx];
+
+        // Update list highlighting
+        document.querySelectorAll('.segment-item').forEach((el, i) => {
+            el.classList.toggle('active', i === idx);
+        });
+
+        // Scroll list item into view
+        const items = document.querySelectorAll('.segment-item');
+        if (items[idx]) items[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+        // Update center panel
+        document.getElementById('currentText').textContent = seg.text;
+        document.getElementById('currentMeta').innerHTML = `
+            <span>⏱ ${formatTime(seg.start)} → ${formatTime(seg.end)}</span>
+            <span>⏳ ${(seg.end - seg.start).toFixed(1)}s</span>
+            <span>#${idx + 1} / ${segments.length}</span>
+        `;
+        document.getElementById('navInfo').textContent = `${idx + 1} / ${segments.length}`;
+
+        // Context (before/after)
+        let ctxBefore = '';
+        for (let i = Math.max(0, idx - 2); i < idx; i++) {
+            ctxBefore += `<div class="context-seg">
+                <div class="ctx-label">← ${idx - i} 段前 (${formatTime(segments[i].start)})</div>
+                <div class="ctx-text">${escapeHtml(segments[i].text)}</div>
+            </div>`;
+        }
+        document.getElementById('contextSegments').innerHTML = ctxBefore;
+
+        let ctxAfter = '';
+        for (let i = idx + 1; i < Math.min(segments.length, idx + 3); i++) {
+            ctxAfter += `<div class="context-seg">
+                <div class="ctx-label">${i - idx} 段後 → (${formatTime(segments[i].start)})</div>
+                <div class="ctx-text">${escapeHtml(segments[i].text)}</div>
+            </div>`;
+        }
+        document.getElementById('contextAfter').innerHTML = ctxAfter;
+
+        // Load frame
+        loadFrame(idx);
+
+        // Update annotation panel
+        updateAnnotationPanel(seg);
+    }
+
+    async function loadFrame(idx) {
+        const container = document.getElementById('frameContainer');
+
+        if (frameCache[idx]) {
+            container.innerHTML = `
+                <img src="data:image/jpeg;base64,${frameCache[idx].image}" alt="frame">
+                <div class="frame-timestamp">${formatTime(frameCache[idx].timestamp)}</div>
+            `;
+            return;
+        }
+
+        container.innerHTML = '<div class="frame-placeholder" style="font-size:24px;color:var(--text-muted);">載入畫面中...</div>';
+
+        try {
+            const data = await fetch(`/api/frame/${idx}`).then(r => r.json());
+            frameCache[idx] = data;
+            if (currentIdx === idx) {
+                container.innerHTML = `
+                    <img src="data:image/jpeg;base64,${data.image}" alt="frame">
+                    <div class="frame-timestamp">${formatTime(data.timestamp)}</div>
+                `;
+            }
+        } catch (e) {
+            container.innerHTML = '<div class="frame-placeholder">⚠️</div>';
+        }
+
+        // Prefetch next 2 frames
+        for (let i = 1; i <= 2; i++) {
+            const nextIdx = idx + i;
+            if (nextIdx < segments.length && !frameCache[nextIdx]) {
+                fetch(`/api/frame/${nextIdx}`).then(r => r.json()).then(d => { frameCache[nextIdx] = d; });
+            }
+        }
+    }
+
+    // ── Annotation Panel ────────────────────────
+    function updateAnnotationPanel(seg) {
+        // Score
+        document.querySelectorAll('.score-btn').forEach(btn => {
+            btn.classList.toggle('selected', parseInt(btn.dataset.score) === seg.humor_score);
+        });
+
+        // Type
+        document.querySelectorAll('.type-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.dataset.type === seg.humor_type);
+        });
+
+        // Structure
+        document.getElementById('toggleSetup').classList.toggle('active', seg.is_setup);
+        document.getElementById('togglePunch').classList.toggle('active', seg.is_punchline);
+
+        // Offensive
+        document.getElementById('offensiveSlider').value = seg.offensive_level;
+        document.getElementById('offensiveValue').textContent = seg.offensive_level;
+
+        // Notes
+        document.getElementById('notesInput').value = seg.notes || '';
+
+        // Auto features
+        document.getElementById('laughConf').textContent = (seg.laughter_confidence * 100).toFixed(0) + '%';
+        document.getElementById('laughBar').style.width = (seg.laughter_confidence * 100) + '%';
+        document.getElementById('laughDb').textContent = seg.laughter_db.toFixed(0) + ' dB';
+    }
+
+    // ── Annotation Actions ──────────────────────
+    async function setScore(score) {
+        if (currentIdx < 0) return;
+        segments[currentIdx].humor_score = score;
+        await saveSegment();
+        updateAnnotationPanel(segments[currentIdx]);
+        renderSegmentList();
+    }
+
+    async function setType(type) {
+        if (currentIdx < 0) return;
+        segments[currentIdx].humor_type = segments[currentIdx].humor_type === type ? '' : type;
+        await saveSegment();
+        updateAnnotationPanel(segments[currentIdx]);
+    }
+
+    async function toggleSetup() {
+        if (currentIdx < 0) return;
+        segments[currentIdx].is_setup = !segments[currentIdx].is_setup;
+        if (segments[currentIdx].is_setup) segments[currentIdx].is_punchline = false;
+        await saveSegment();
+        updateAnnotationPanel(segments[currentIdx]);
+    }
+
+    async function togglePunch() {
+        if (currentIdx < 0) return;
+        segments[currentIdx].is_punchline = !segments[currentIdx].is_punchline;
+        if (segments[currentIdx].is_punchline) segments[currentIdx].is_setup = false;
+        await saveSegment();
+        updateAnnotationPanel(segments[currentIdx]);
+    }
+
+    async function setOffensive(val) {
+        if (currentIdx < 0) return;
+        segments[currentIdx].offensive_level = parseInt(val);
+        document.getElementById('offensiveValue').textContent = val;
+        await saveSegment();
+    }
+
+    async function setNotes(text) {
+        if (currentIdx < 0) return;
+        segments[currentIdx].notes = text;
+        // Don't save immediately on every keystroke, debounce
+        clearTimeout(window._notesSaveTimer);
+        window._notesSaveTimer = setTimeout(() => saveSegment(), 1000);
+    }
+
+    async function saveSegment() {
+        if (currentIdx < 0) return;
+        const seg = segments[currentIdx];
+        try {
+            await fetch(`/api/segment/${currentIdx}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(seg),
+            });
+            updateProgress();
+        } catch (e) {
+            showToast('儲存失敗', 'warning');
+        }
+    }
+
+    // ── Navigation ──────────────────────────────
+    function prevSegment() {
+        if (currentIdx > 0) selectSegment(currentIdx - 1);
+    }
+
+    function nextSegment() {
+        if (currentIdx < segments.length - 1) selectSegment(currentIdx + 1);
+    }
+
+    function nextUnannotated() {
+        for (let i = currentIdx + 1; i < segments.length; i++) {
+            if (!segments[i].annotated) { selectSegment(i); return; }
+        }
+        for (let i = 0; i < currentIdx; i++) {
+            if (!segments[i].annotated) { selectSegment(i); return; }
+        }
+        showToast('🎉 全部標註完成！', 'success');
+    }
+
+    // ── Save & Export ───────────────────────────
+    async function saveAll() {
+        try {
+            const res = await fetch('/api/save', { method: 'POST' }).then(r => r.json());
+            showToast('💾 已儲存', 'success');
+        } catch (e) {
+            showToast('儲存失敗', 'warning');
+        }
+    }
+
+    async function exportData(type) {
+        try {
+            const res = await fetch(`/api/export/${type}`, { method: 'POST' }).then(r => r.json());
+            showToast(`📤 已匯出 ${res.count} 筆 → ${type.toUpperCase()}`, 'success');
+        } catch (e) {
+            showToast('匯出失敗', 'warning');
+        }
+    }
+
+    // ── Utilities ───────────────────────────────
+    function formatTime(sec) {
+        if (sec == null) return '—';
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function updateProgress(annotated, total) {
+        if (annotated === undefined) {
+            annotated = segments.filter(s => s.annotated).length;
+            total = segments.length;
+        }
+        const pct = total > 0 ? (annotated / total * 100) : 0;
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('progressText').textContent = `${annotated} / ${total}`;
+    }
+
+    function showToast(msg, type = '') {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = 'toast show ' + type;
+        setTimeout(() => { toast.className = 'toast'; }, 2500);
+    }
+
+    // ── Keyboard Shortcuts ──────────────────────
+    document.addEventListener('keydown', (e) => {
+        // Ignore if typing in text field
+        if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+
+        if (e.key >= '1' && e.key <= '5') {
+            setScore(parseInt(e.key));
+        } else if (e.key === 'ArrowLeft') {
+            prevSegment();
+        } else if (e.key === 'ArrowRight') {
+            nextSegment();
+        } else if (e.key === 's' || e.key === 'S') {
+            if (e.ctrlKey) { e.preventDefault(); saveAll(); }
+            else { toggleSetup(); }
+        } else if (e.key === 'p' || e.key === 'P') {
+            togglePunch();
+        } else if (e.key === 'n' || e.key === 'N') {
+            nextUnannotated();
+        }
+    });
+
+    // ── Start ───────────────────────────────────
+    init();
+    </script>
+</body>
+</html>

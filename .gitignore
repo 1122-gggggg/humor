@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+.pytest_cache/
+
+# Data and Logs
+data/raw/audio/*
+data/raw/transcripts/*
+data/raw/comments/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+logs/
+*.log
+
+# Models and VectorDB
+data/chroma_db/
+data/models/
+*.bin
+*.model
+*.pt
+*.safetensors
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project specific
+colab_training.ipynb_checkpoints/
+.ipynb_checkpoints/
+node_modules/
+.DS_Store

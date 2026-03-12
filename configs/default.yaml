@@ -1,0 +1,202 @@
+# ============================================================
+# 幽默脫口秀 AI 機器人 — 全域配置
+# ============================================================
+
+# --- 資料引擎 ---
+data_engine:
+  # YouTube 下載設定
+  download:
+    output_dir: "data/raw"
+    audio_format: "wav"
+    audio_sample_rate: 16000   # YAMNet 需要 16kHz mono
+    audio_channels: 1
+
+  # Whisper 語音辨識設定
+  whisper:
+    model_size: "large-v3"     # tiny / base / small / medium / large-v3
+    language: "zh"             # 主要語言：中文
+    beam_size: 5
+    word_timestamps: true      # 需要逐字時間戳記
+
+  # YAMNet 笑聲偵測設定
+  laughter_detection:
+    model_url: "https://tfhub.dev/google/yamnet/1"
+    # YAMNet 事件類別 ID（AudioSet ontology）
+    target_classes:
+      - "Laughter"
+      - "Baby laughter"
+      - "Giggle"
+      - "Snicker"
+      - "Belly laugh"
+      - "Chuckle, chortle"
+      - "Crowd"
+      - "Clapping"
+    confidence_threshold: 0.8   # 最低信心閾值（論文建議 > 0.8）
+    min_duration_sec: 0.5       # 最短笑聲持續時間（秒）
+
+  # Setup-Punchline 對齊設定
+  alignment:
+    punchline_lookback_sec: [3, 5]    # 從笑聲音峰回溯定義 Punchline
+    setup_duration_sec: [5, 10]       # Punchline 前的 Setup 區段
+    min_laughter_db: -30              # 最低笑聲分貝門檻
+    merge_gap_sec: 1.0                # 相鄰笑聲合併間距
+
+  # Safety-Humor 標註設定
+  safety:
+    dimensions:
+      - "benign_violation"     # 良性衝突程度 (0-1)
+      - "offensive_level"      # 冒犯性等級 (0-5)
+      - "target_group"         # 針對群體（自嘲/政治/社會/族群...）
+      - "humor_type"           # 幽默類型（諷刺/自嘲/荒謬/語言遊戲...）
+
+  # 影片觀眾反應分析設定
+  video_analysis:
+    sample_interval_sec: 1.0      # 取樣間隔
+    max_faces_per_frame: 10       # 每幀最多分析臉孔
+    min_face_size: 30             # 最小臉孔像素
+    emotion_backend: "deepface"    # deepface / mediapipe / heuristic
+    audience_roi: [0.0, 0.5, 1.0, 0.5]  # 觀眾區域 (畫面下半部)
+
+  # 文本後處理設定
+  text_processing:
+    enable_diarization: true       # 說話者分離
+    enable_punctuation: true       # 標點復原
+    diarization_model: "pyannote/speaker-diarization-3.1"
+    punctuation_method: "rule"     # llm / ct_transformer / rule
+    min_segment_length: 3          # 最短片段字數
+    merge_gap_sec: 1.0             # 合併間距
+
+  # 自動標註管線設定
+  auto_annotation:
+    audio_weight: 0.75             # α: 音訊主權重
+    video_weight: 0.25             # β: 視覺輔助權重
+    funny_threshold: 0.7           # "好笑" 閾值
+    neutral_threshold: 0.4         # "中性" 閾值
+    min_candidate_score: 0.3       # 最低候選分數
+    laughter_prob_weight: 0.4      # w1: 笑聲機率權重
+    laughter_db_weight: 0.35       # w2: 笑聲分貝權重
+    laughter_dur_weight: 0.25      # w3: 笑聲持續時間權重
+
+  # 韻律分析設定
+  prosody:
+    silence_threshold_db: -40.0    # 靜音判定閾值
+    min_pause_duration: 0.1        # 最短停頓時間
+    comic_beat_range: [0.3, 1.5]   # 理想 comic beat 範圍（秒）
+    post_punch_min_pause: 1.0      # Punchline 後最短停頓
+
+  # FACS 臉部動作編碼設定
+  facs:
+    duchenne_au6_threshold: 0.3    # AU6 杜氏笑容最低值
+    duchenne_au12_threshold: 0.3   # AU12 杜氏笑容最低值
+    enable_pose: true              # 啟用骨架偵測
+    shoulder_tremor_threshold: 3.0 # 肩膀震顫閾值（像素 std）
+    lean_forward_angle: 10         # 前傾角度
+    lean_backward_angle: -10       # 後仰角度
+
+  # 笑聲包絡線分析設定
+  laughter_envelope:
+    laughter_freq_low: 500         # 笑聲頻帶下限 (Hz)
+    laughter_freq_high: 4000       # 笑聲頻帶上限 (Hz)
+    burst_threshold_db: -30.0      # 爆發判定分貝
+    quality_weights:
+      surprise: 0.35               # 驚喜程度權重
+      resonance: 0.40              # 共鳴程度權重
+      multi_hit: 0.25              # 多笑點權重
+
+  # 負面樣本收集設定
+  negative_sampling:
+    bombing_db_threshold: -45.0    # 冷場分貝閾值
+    polite_laugh_db: -35.0         # 禮貌笑聲分貝
+    min_silence_for_bombing: 2.0   # 冷場最短沉默
+    min_contrast_similarity: 0.3   # 對比對最低相似度
+
+  # 即時新聞爬取設定
+  news_crawler:
+    freshness_halflife_days: 3     # 時效性半衰期
+    max_items_per_source: 20       # 每來源最大抓取數
+    humor_potential_weights:
+      controversial: 0.3
+      political: 0.2
+      absurd: 0.2
+
+  # Web 標註介面設定
+  annotation:
+    port: 8501
+    output_dir: "data/annotations"
+    auto_save: true
+    frame_quality: 85              # JPEG 截幀品質
+
+
+# --- 模型架構 ---
+models:
+  # JokeWriter SFT
+  joke_writer:
+    base_model: "meta-llama/Llama-3.1-8B-Instruct"
+    lora:
+      r: 64
+      lora_alpha: 128
+      target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+      lora_dropout: 0.05
+    max_seq_length: 2048
+
+  # GTVH 衝突腳本提取器
+  script_extractor:
+    llm_backend: "openai"      # openai / anthropic / local
+    model_name: "gpt-4o"
+    temperature: 0.3
+
+  # RAG 素材庫
+  rag:
+    embedding_model: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    collection_name: "humor_materials"
+    top_k: 5
+    freshness_weight: 0.3      # 時效性權重
+
+# --- 訓練策略 ---
+training:
+  # Reward Model
+  reward_model:
+    base_model: "roberta-large"
+    learning_rate: 1.0e-5
+    batch_size: 8
+    num_epochs: 3
+    max_length: 1024
+
+  # PPO 訓練
+  ppo:
+    learning_rate: 1.0e-6
+    batch_size: 4
+    mini_batch_size: 2
+    ppo_epochs: 4
+    reward_weights:
+      humor_score: 0.6         # α
+      safety_score: 0.3        # β
+      kl_penalty: 0.1          # γ
+
+  # DPO 訓練（備選方案）
+  dpo:
+    learning_rate: 5.0e-7
+    beta: 0.1
+    batch_size: 4
+    num_epochs: 2
+
+# --- 評估系統 ---
+evaluation:
+  judge:
+    llm_backend: "openai"
+    model_name: "gpt-4o"
+    dimensions:
+      persona_fidelity:
+        weight: 0.30
+        description: "幽默風格一致性"
+      humor_mechanics:
+        weight: 0.25
+        description: "翻轉驚喜程度"
+      safety_sensitivity:
+        weight: 0.25
+        description: "良性衝突控制"
+      language_quality:
+        weight: 0.20
+        description: "語言流暢度"
+    num_samples: 50
+    temperature: 0.1
