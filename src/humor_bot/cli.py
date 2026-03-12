@@ -147,78 +147,95 @@ def process_pipeline(
     output_path.mkdir(parents=True, exist_ok=True)
 
     # 初始化模組
+    from humor_bot.data_engine.youtube_downloader import YouTubeDownloader
+    from humor_bot.data_engine.laughter_detector import LaughterDetector
+    from humor_bot.data_engine.audio_analyzer import AudioAnalyzer
+    from humor_bot.data_engine.alignment import SetupPunchlineAligner
+
     downloader = YouTubeDownloader(whisper_model_size=whisper_model)
     detector = LaughterDetector(confidence_threshold=threshold)
     analyzer = AudioAnalyzer()
     aligner = SetupPunchlineAligner(min_laughter_confidence=threshold)
 
-    # 下載
-    console.print("[bold blue]Phase 1: 下載影片...[/bold blue]")
-    download_results = downloader.process_url_list(url_list)
+    # 讀取 URL 清單
+    urls = []
+    if Path(url_list).exists():
+        with open(url_list, "r", encoding="utf-8") as f:
+            urls = [l.strip() for l in f if l.strip() and not l.startswith("#")]
+    
+    console.print(f"[bold blue]開始串流處理管線 (共 {len(urls)} 支影片)...[/bold blue]")
 
     all_aligned = []
 
-    for result in download_results:
-        console.print(f"\n[bold]處理: {result.video_id}[/bold]")
+    for i, url in enumerate(urls, 1):
+        console.print(f"\n[bold cyan][{i}/{len(urls)}] 處理中: {url}[/bold cyan]")
+        
+        try:
+            # 1. 逐一處理：下載 + 轉錄
+            result = downloader.process_url(url)
+            console.print(f"  📥 下載完成: {result.title[:40]}...")
 
-        # 笑聲偵測
-        console.print("  🎤 偵測笑聲...")
-        events = detector.detect(result.audio_path)
-        console.print(f"  → {len(events)} 個事件")
+            # 2. 笑聲偵測
+            console.print("  🎤 偵測笑聲...")
+            events = detector.detect(result.audio_path)
+            console.print(f"  → {len(events)} 個事件")
 
-        # 音訊分析
-        console.print("  📊 分析音訊特徵...")
-        audio_features = []
-        for e in events:
-            feat = analyzer.analyze_segment(result.audio_path, e.start, e.end)
-            audio_features.append({
-                "start": feat.start, "end": feat.end, "rms_db": feat.rms_db,
-            })
+            # 3. 音訊分析
+            console.print("  📊 分析音訊特徵...")
+            audio_features = []
+            for e in events:
+                feat = analyzer.analyze_segment(result.audio_path, e.start, e.end)
+                audio_features.append({
+                    "start": feat.start, "end": feat.end, "rms_db": feat.rms_db,
+                })
 
-        # 載入逐字稿
-        if result.transcript_path and result.transcript_path.exists():
-            with open(result.transcript_path, "r", encoding="utf-8") as f:
-                transcript = json.load(f)
-        else:
-            console.print("  [yellow]⚠ 無逐字稿，跳過對齊[/yellow]")
+            # 4. 載入並解析逐字稿
+            if result.transcript_path and result.transcript_path.exists():
+                with open(result.transcript_path, "r", encoding="utf-8") as f:
+                    transcript = json.load(f)
+            else:
+                console.print("  [yellow]⚠ 無逐字稿，跳過對齊[/yellow]")
+                continue
+
+            laughter_dicts = [
+                {
+                    "start": e.start, "end": e.end, "duration": e.duration,
+                    "confidence": e.confidence, "event_class": e.event_class,
+                }
+                for e in events
+            ]
+
+            # 5. 對齊
+            console.print("  📎 對齊 Setup-Punchline...")
+            aligned = aligner.align(
+                result.video_id, transcript, laughter_dicts, audio_features
+            )
+            all_aligned.extend(aligned)
+            console.print(f"  → {len(aligned)} 個段子")
+
+            # 6. 產生視覺化
+            plot_path = output_path / f"{result.video_id}_intensity.png"
+            analyzer.plot_intensity(
+                result.audio_path,
+                laughter_events=events,
+                output_path=plot_path,
+                title=f"Laughter Intensity: {result.video_id}",
+            )
+            
+            # 7. 立即清理：處理完這部就刪除音軌
+            if cleanup:
+                console.print(f"  🧹 清理原始音軌: {result.audio_path.name}")
+                try:
+                    if result.audio_path and result.audio_path.exists():
+                        result.audio_path.unlink()
+                    # 系統會保留 JSON 字幕與分析結果，因為它們很小 (KB級)
+                except Exception as e:
+                    console.print(f"  [red]清理失敗: {e}[/red]")
+
+        except Exception as e:
+            console.print(f"  [red]❌ 影片處理失敗 ({url}): {e}[/red]")
             continue
 
-        # 笑聲事件轉 dict
-        laughter_dicts = [
-            {
-                "start": e.start, "end": e.end, "duration": e.duration,
-                "confidence": e.confidence, "event_class": e.event_class,
-            }
-            for e in events
-        ]
-
-        # 對齊
-        console.print("  📎 對齊 Setup-Punchline...")
-        aligned = aligner.align(
-            result.video_id, transcript, laughter_dicts, audio_features
-        )
-        all_aligned.extend(aligned)
-        console.print(f"  → {len(aligned)} 個段子")
-
-        # 產生視覺化
-        plot_path = output_path / f"{result.video_id}_intensity.png"
-        analyzer.plot_intensity(
-            result.audio_path,
-            laughter_events=events,
-            output_path=plot_path,
-            title=f"Laughter Intensity: {result.video_id}",
-        )
-        
-        # 雲端串流/節省空間策略：即存即刪 (Stream & Delete)
-        if cleanup:
-            console.print("  🧹 正在清理原始音軌與暫存檔 (Stream & Delete)...")
-            try:
-                if result.audio_path and result.audio_path.exists():
-                    result.audio_path.unlink()
-                if result.subtitle_path and result.subtitle_path.exists():
-                    result.subtitle_path.unlink()
-            except Exception as e:
-                console.print(f"  [red]清理失敗: {e}[/red]")
 
     # 儲存完整資料集
     final_output = output_path / "dataset.json"

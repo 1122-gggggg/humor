@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 幽默脫口秀 AI 機器人 🎭
 
 > 多模態幽默偵測與生成系統 — 從 YouTube 脫口秀影片中自動學習幽默。
@@ -95,3 +96,6 @@ src/humor_bot/
 ## License
 
 MIT
+=======
+# humor
+>>>>>>> 27e6ec6f53a821dd120bbd1bfd0597037a1a10a5
