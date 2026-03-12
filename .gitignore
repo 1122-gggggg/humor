@@ -7,18 +7,20 @@ env/
 venv/
 ENV/
 .pytest_cache/
+.env
+
+# Downloads and Cache
+ffmpeg-master-latest-win64-gpl/
+err.txt
 
 # Data and Logs
-data/raw/audio/*
-data/raw/transcripts/*
-data/raw/comments/*
-!data/raw/.gitkeep
-data/processed/*
-!data/processed/.gitkeep
+data/
+!data/.gitkeep
 logs/
 *.log
 
 # Models and VectorDB
+/models/
 data/chroma_db/
 data/models/
 *.bin

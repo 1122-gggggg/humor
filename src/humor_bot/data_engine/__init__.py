@@ -1,5 +1,26 @@
 """數據引擎 — 多模態幽默偵測、標註、分析完整管線"""
 
+try:
+    import sys
+    # 解決 tensorflow-hub 在高版本缺少 pkg_resources 的問題
+    if 'pkg_resources' not in sys.modules:
+        import types
+        dummy_pkg = types.ModuleType('pkg_resources')
+        dummy_pkg.parse_version = lambda v: (999, 999, 999) # 永遠通過版本檢查
+        sys.modules['pkg_resources'] = dummy_pkg
+
+    import tensorflow as tf
+    # 解決高版本 TF 遺失 register_load_context_function 的問題
+    if hasattr(tf, '__internal__') and not hasattr(tf.__internal__, 'register_load_context_function'):
+        tf.__internal__.register_load_context_function = lambda *args, **kwargs: None
+        
+    if hasattr(tf, 'compat') and hasattr(tf.compat, 'v2') and hasattr(tf.compat.v2, '__internal__'):
+        if not hasattr(tf.compat.v2.__internal__, 'register_load_context_function'):
+            tf.compat.v2.__internal__.register_load_context_function = lambda *args, **kwargs: None
+except Exception:
+    pass
+
+
 from humor_bot.data_engine.youtube_downloader import YouTubeDownloader, SubtitleSource
 from humor_bot.data_engine.laughter_detector import LaughterDetector
 from humor_bot.data_engine.audio_analyzer import AudioAnalyzer
