@@ -241,13 +241,14 @@ class AutoAnnotationPipeline:
                         tragedy_score = 0.0
                 else:
                     tragedy_score = 0.0
+                    txt_safety = 0.5
                 
                 # Safety: 取決於演員的輕鬆語氣、自嘲態度（結合視覺/聽覺正面特徵，再加上文本 Zero-shot 特徵）
                 safety_score = max(0.3, video_score)
                 if audience_metrics.get("positive_ratio"):
                     safety_score = (safety_score + float(audience_metrics["positive_ratio"])) / 2.0
                 # 將新導入的 mDeBERTa 文字安全分數加權混入
-                safety_score = (safety_score + getattr(locals(), 'txt_safety', 0.5)) / 2.0
+                safety_score = (safety_score + txt_safety) / 2.0
                 
                 # Humor(t) = Violation(t) x Safety(t)
                 bvt_score = violation_score * safety_score

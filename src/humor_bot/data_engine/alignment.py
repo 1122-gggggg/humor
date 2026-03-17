@@ -242,8 +242,8 @@ class SetupPunchlineAligner:
         公式：結合笑聲強度、持續時間與偵測信心度
         研究證實笑聲強度與幽默感有強正相關 (r=0.67)
         """
-        # 分貝正規化（假設 -40 ~ 0 dB 範圍）
-        db_norm = np.clip((laughter_db + 40) / 40, 0, 1)
+        # 分貝正規化（假設 -60 ~ 0 dB 範圍，與 auto_annotator 一致）
+        db_norm = np.clip((laughter_db + 60) / 60, 0, 1)
 
         # 持續時間正規化（假設 0 ~ 10 秒範圍）
         dur_norm = np.clip(laughter_duration / 10.0, 0, 1)

@@ -18,6 +18,8 @@ from humor_bot.data_engine.audio_analyzer import AudioAnalyzer
 from humor_bot.data_engine.alignment import SetupPunchlineAligner
 from humor_bot.data_engine.auto_annotator import AutoAnnotationPipeline
 
+from tqdm import tqdm
+
 def download_audio_only(url: str, output_dir: Path):
     """測試用：僅下載 wav (分析聲音) 以及字幕，完全不抓影片省空間"""
     print(f"📥 正在下載音軌: {url}")
@@ -33,8 +35,8 @@ def download_audio_only(url: str, output_dir: Path):
             'preferredcodec': 'wav',
         }],
         'postprocessor_args': ['-ar', '16000', '-ac', '1'],
-        'quiet': True,
-        'no_warnings': True,
+        'quiet': False,
+        'no_warnings':False,
     }
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -101,19 +103,19 @@ def main():
             for e in laughter_events
         ]
         
-        # 5. 音訊分析
+# 5. 音訊分析
         print("📊 分析音訊特徵...")
         audio_features = []
-        for e in laughter_events:
+        # 使用 tqdm 包裝迴圈
+        for e in tqdm(laughter_events, desc="分析中"):
             feat = audio_analyzer.analyze_segment(audio_path, e.start, e.end)
-            audio_features.append({'start': feat.start, 'end': feat.end, 'rms_db': feat.rms_db})
-            
+            audio_features.append({'start': feat.start, 'end': feat.end, 'rms_db': feat.rms_db})            
         # 6. 此處已省略影像分析
         video_reactions = None
             
         # 7. 對齊
         print("📎 對齊 Setup 與 Punchline...")
-        aligned_jokes = aligner.align(vid_id, transcript_data, laughter_dicts, audio_features)
+        aligned_jokes = aligner.align(vid_id, transcript_data["segments"], laughter_dicts, audio_features)
         
         # 8. 評分與標註
         print("🏷️ 計算幽默分數 (Humor Score)...")

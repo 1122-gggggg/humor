@@ -277,6 +277,15 @@ class HumorJudge:
                 max_tokens=500,
             )
             return response.choices[0].message.content.strip()
+        elif self.llm_backend == "anthropic":
+            import anthropic
+            client = anthropic.Anthropic()
+            response = client.messages.create(
+                model=self.model_name,
+                max_tokens=500,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return response.content[0].text.strip()
         else:
             raise ValueError(f"未支援的 LLM 後端: {self.llm_backend}")
 

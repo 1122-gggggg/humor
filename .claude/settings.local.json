@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(yt-dlp --flat-playlist --print '%\\(url\\)s %\\(title\\)s' \"https://www.youtube.com/watch?v=H-ekvQvuwos&list=PLIjpwRtLsLaoj1bdTJgMCjaRQ3-g1VQwI\")",
+      "Bash(yt-dlp --flat-playlist --print \"%\\(id\\)s %\\(title\\)s\" \"https://www.youtube.com/playlist?list=PLIjpwRtLsLaoj1bdTJgMCjaRQ3-g1VQwI\")",
+      "Bash(python -m yt_dlp --flat-playlist --print \"%\\(id\\)s|||%\\(title\\)s\" \"https://www.youtube.com/playlist?list=PLIjpwRtLsLaoj1bdTJgMCjaRQ3-g1VQwI\")",
+      "Bash(uv --version)",
+      "Bash(uv venv:*)",
+      "Bash(uv pip:*)",
+      "Bash(.venv/Scripts/python -c \":*)",
+      "Bash(.venv/Scripts/humor-bot download:*)",
+      "Bash(.venv/Scripts/pip install:*)",
+      "Bash(.venv/Scripts/python -c \"import imageio_ffmpeg; print\\(imageio_ffmpeg.get_ffmpeg_exe\\(\\)\\)\")",
+      "Bash(FFMPEG_DIR=\"c:/Users/90607/humor/.venv/Lib/site-packages/imageio_ffmpeg/binaries\")",
+      "Bash(export PATH=\"$FFMPEG_DIR:$PATH\")",
+      "Bash(ffmpeg.exe -version)",
+      "Bash(FFMPEG_DIR=\"/c/Users/90607/humor/.venv/Lib/site-packages/imageio_ffmpeg/binaries\")",
+      "Bash(\"$FFMPEG_DIR/ffmpeg.exe\" -version)",
+      "Bash(winget install:*)"
+    ]
+  }
+}

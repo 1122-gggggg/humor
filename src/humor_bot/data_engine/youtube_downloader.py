@@ -25,6 +25,7 @@ from pathlib import Path
 
 import yt_dlp
 from faster_whisper import WhisperModel
+from tqdm import tqdm  # 匯入進度條工具
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ class YouTubeDownloader:
             output_dir: 輸出根目錄
             audio_sample_rate: 音訊取樣率（YAMNet 需要 16kHz）
             whisper_model_size: Whisper 模型大小 (large-v3 推薦)
-            whisper_language: 主要語言 (None 代表自動偵測多國語言，支援國外專場)
+            whisper_language: 主要語言 (None 代表自動偵測多國語言)
             whisper_beam_size: Beam search 寬度
             prefer_manual_subs: 是否優先使用人工字幕
             force_whisper: 是否強制使用 Whisper（忽略所有現有字幕）
@@ -113,12 +114,22 @@ class YouTubeDownloader:
             )
         return self._whisper_model
 
+    @staticmethod
+    def _find_ffmpeg() -> str | None:
+        """自動尋找 ffmpeg 路徑（優先用 imageio_ffmpeg 內建版本）"""
+        try:
+            import imageio_ffmpeg
+            return str(Path(imageio_ffmpeg.get_ffmpeg_exe()).parent)
+        except Exception:
+            pass
+        return None
+
     def _get_ydl_opts(self, video_id: str) -> dict:
         """產生 yt-dlp 下載選項"""
         audio_dir = self.output_dir / "audio"
         audio_dir.mkdir(parents=True, exist_ok=True)
 
-        return {
+        opts = {
             "format": "bestaudio/best",
             "outtmpl": str(audio_dir / f"{video_id}.%(ext)s"),
             "postprocessors": [
@@ -131,15 +142,21 @@ class YouTubeDownloader:
                 "-ar", str(self.audio_sample_rate),
                 "-ac", "1",  # mono
             ],
-            # 同時下載人工字幕和自動字幕
             "writesubtitles": True,
             "writeautomaticsub": True,
             "subtitleslangs": ["zh-TW", "zh-Hant", "zh", "en"],
             "subtitlesformat": "json3",
-            "getcomments": True,  # 取得 YouTube 留言以分析講者人設
+            "getcomments": True,
             "quiet": True,
             "no_warnings": True,
         }
+
+        # 自動填入 ffmpeg 路徑
+        ffmpeg_dir = self._find_ffmpeg()
+        if ffmpeg_dir:
+            opts["ffmpeg_location"] = ffmpeg_dir
+
+        return opts
 
     def _extract_video_id(self, url: str) -> str:
         """從 URL 提取 video ID"""
@@ -160,21 +177,9 @@ class YouTubeDownloader:
         video_id: str,
         ydl_info: dict | None = None,
     ) -> tuple[Path | None, SubtitleSource]:
-        """
-        偵測最佳字幕來源
-
-        優先級：人工 zh-Hant > 人工 zh > 人工 en > 自動字幕 > None
-
-        Args:
-            video_id: 影片 ID
-            ydl_info: yt-dlp 提取的影片資訊
-
-        Returns:
-            (subtitle_path, subtitle_source)
-        """
+        """偵測最佳字幕來源"""
         subtitle_dir = self.output_dir / "audio"
 
-        # 1. 檢查人工字幕
         if ydl_info:
             manual_subs = ydl_info.get("subtitles", {})
             auto_subs = ydl_info.get("automatic_captions", {})
@@ -182,7 +187,6 @@ class YouTubeDownloader:
             manual_subs = {}
             auto_subs = {}
 
-        # 優先搜尋人工字幕
         source_mapping = {
             "zh-TW": SubtitleSource.MANUAL_ZH_HANT,
             "zh-Hant": SubtitleSource.MANUAL_ZH_HANT,
@@ -198,7 +202,6 @@ class YouTubeDownloader:
                     logger.info(f"✅ 找到人工字幕: {lang} ({source.value})")
                     return candidate, source
 
-        # 2. 搜尋自動字幕
         for lang in self.AUTO_SUB_LANGS:
             if lang in auto_subs:
                 candidate = subtitle_dir / f"{video_id}.{lang}.json3"
@@ -206,7 +209,6 @@ class YouTubeDownloader:
                     logger.info(f"⚠️ 使用自動字幕: {lang}")
                     return candidate, SubtitleSource.AUTO_CAPTION
 
-        # 3. 直接搜尋檔案系統（fallback）
         for lang in self.MANUAL_SUB_LANGS + self.AUTO_SUB_LANGS:
             candidate = subtitle_dir / f"{video_id}.{lang}.json3"
             if candidate.exists():
@@ -216,20 +218,11 @@ class YouTubeDownloader:
         return None, SubtitleSource.NONE
 
     def download_audio(self, url: str) -> DownloadResult:
-        """
-        下載 YouTube 影片的音軌
-
-        Args:
-            url: YouTube 影片 URL
-
-        Returns:
-            DownloadResult 包含音訊路徑與影片資訊
-        """
+        """下載 YouTube 影片的音軌"""
         video_id = self._extract_video_id(url)
         audio_dir = self.output_dir / "audio"
         audio_path = audio_dir / f"{video_id}.wav"
 
-        # 如果已下載過則跳過
         if audio_path.exists():
             logger.info(f"音訊檔案已存在，跳過下載: {audio_path}")
             sub_path, sub_source = self._detect_subtitle_source(video_id)
@@ -254,7 +247,6 @@ class YouTubeDownloader:
             title = info.get("title", "unknown")
             duration = info.get("duration", 0.0)
             
-            # 儲存留言供人設分析
             comments = info.get("comments", [])
             comments_path = None
             speaker_persona = ""
@@ -262,14 +254,12 @@ class YouTubeDownloader:
                 comments_dir = self.output_dir / "comments"
                 comments_dir.mkdir(parents=True, exist_ok=True)
                 comments_path = comments_dir / f"{video_id}.json"
-                text_comments = [c.get("text", "") for c in comments[:100]] # 取前 100 則
+                text_comments = [c.get("text", "") for c in comments[:100]]
                 with open(comments_path, "w", encoding="utf-8") as f:
                     json.dump(text_comments, f, ensure_ascii=False, indent=2)
                 
-                # 自動分析講者人設
                 speaker_persona = self._analyze_persona(title, text_comments)
 
-        # 偵測字幕來源
         sub_path, sub_source = self._detect_subtitle_source(video_id, info)
 
         result = DownloadResult(
@@ -294,18 +284,15 @@ class YouTubeDownloader:
         return result
 
     def _analyze_persona(self, title: str, comments: list[str]) -> str:
-        """透過前沿留言了解觀眾對講者的普遍印象，歸納其單口喜劇人設"""
+        """分析單口喜劇人設"""
         if not comments:
             return "General (無特定人設)"
             
-        comments_text = "\n- ".join(comments[:30]) # 取前 30 則即具代表性
+        comments_text = "\n- ".join(comments[:30])
         prompt = f"""請根據以下脫口秀影片標題與 YouTube 觀眾留言草稿，以『極簡的三個形容詞』總結這位脫口秀演員主要的舞台人設 (Persona)。
-這將作為AI辨識幽默強弱勢反轉的重要依據。（例如：憤世嫉俗、地獄哏、高材生自傲、生活魯蛇、冷面笑匠）
-
 影片標題：{title}
 觀眾留言：
 - {comments_text}
-
 總結人設（格式：形容詞1, 形容詞2, 形容詞3）："""
 
         try:
@@ -328,28 +315,11 @@ class YouTubeDownloader:
         use_subtitle: Path | None = None,
         subtitle_source: SubtitleSource = SubtitleSource.NONE,
     ) -> list[TranscriptSegment]:
-        """
-        產生逐字稿，根據字幕來源決定策略
-
-        策略：
-        1. 人工字幕（zh-Hant）→ 直接使用，不需 Whisper
-        2. 自動字幕 → 使用但品質可能差，可選擇 Whisper 重做
-        3. 無字幕 → VAD 前處理 + Whisper ASR
-
-        Args:
-            audio_path: 音訊檔案路徑
-            use_subtitle: 字幕檔案路徑
-            subtitle_source: 字幕來源類型
-
-        Returns:
-            TranscriptSegment 列表
-        """
-        # 強制使用 Whisper 模式
+        """產生逐字稿"""
         if self.force_whisper:
             logger.info("強制 Whisper 模式：忽略所有現有字幕")
             return self._whisper_transcribe(audio_path)
 
-        # 優先級 1: 人工字幕（Ground Truth）
         if use_subtitle and subtitle_source in (
             SubtitleSource.MANUAL_ZH_HANT,
             SubtitleSource.MANUAL_ZH,
@@ -358,51 +328,31 @@ class YouTubeDownloader:
             logger.info(f"🏆 使用人工字幕（Ground Truth）: {use_subtitle}")
             return self._parse_json3_subtitle(use_subtitle)
 
-        # 優先級 2: 自動字幕（品質不一）
         if use_subtitle and subtitle_source == SubtitleSource.AUTO_CAPTION:
             logger.info(f"⚠️ 使用自動字幕（品質可能不佳）: {use_subtitle}")
             segments = self._parse_json3_subtitle(use_subtitle)
-            # 如果自動字幕太短或太破碎，fallback 到 Whisper
             if self._is_subtitle_quality_poor(segments):
                 logger.warning("自動字幕品質太差，改用 Whisper ASR")
                 return self._whisper_transcribe(audio_path)
             return segments
 
-        # 優先級 3: Whisper ASR（無字幕）
         logger.info("無可用字幕，使用 Whisper ASR")
         return self._whisper_transcribe(audio_path)
 
     def _is_subtitle_quality_poor(self, segments: list[TranscriptSegment]) -> bool:
-        """
-        判斷自動字幕品質是否太差
-
-        啟發式規則：
-        - 片段數太少（全片 < 10 段）
-        - 平均片段長度太短（< 2 字）
-        - 太多空白片段
-        """
+        """判斷字幕品質"""
         if len(segments) < 10:
             return True
-
         avg_len = sum(len(s.text) for s in segments) / max(len(segments), 1)
         if avg_len < 2:
             return True
-
         empty_ratio = sum(1 for s in segments if len(s.text.strip()) == 0) / max(len(segments), 1)
         if empty_ratio > 0.3:
             return True
-
         return False
 
     def _whisper_transcribe(self, audio_path: str | Path) -> list[TranscriptSegment]:
-        """
-        使用 Whisper 進行 ASR 轉錄
-
-        特點：
-        - VAD (Voice Activity Detection) 前處理，過濾純笑聲/掌聲區段
-        - word_timestamps=True 提供逐字時間戳記
-        - 對台灣脫口秀常見的中英夾雜（Code-switching）有良好支援
-        """
+        """使用 Whisper 進行 ASR 轉錄並顯示進度"""
         logger.info(f"🎙️ Whisper ASR 轉錄: {audio_path}")
         logger.info(f"   模型: {self.whisper_model_size} | VAD 啟用 | 逐字時間戳記啟用")
 
@@ -411,44 +361,39 @@ class YouTubeDownloader:
             language=self.whisper_language,
             beam_size=self.whisper_beam_size,
             word_timestamps=True,
-            # VAD 前處理：過濾掉純掌聲/笑聲等非語音區段
-            # 這對脫口秀影片至關重要，避免 ASR 在笑聲段產生幻覺
             vad_filter=True,
             vad_parameters=dict(
-                # 靜音/非語音門檻：500ms 以上的非語音段會被跳過
                 min_silence_duration_ms=500,
-                # 語音邊界填充：確保語句開頭不被截斷
                 speech_pad_ms=300,
-                # 較長的最小語音時段，避免把短笑聲誤認為語音
                 min_speech_duration_ms=250,
             ),
         )
 
         segments = []
-        for seg in segments_gen:
-            words = []
-            if seg.words:
-                words = [
-                    {
-                        "word": w.word,
-                        "start": w.start,
-                        "end": w.end,
-                        "probability": w.probability,
-                    }
-                    for w in seg.words
-                ]
-            segments.append(TranscriptSegment(
-                start=seg.start,
-                end=seg.end,
-                text=seg.text.strip(),
-                words=words,
-            ))
+        # 加入 tqdm 進度條，根據音訊秒數更新
+        with tqdm(total=round(info.duration, 2), unit="sec", desc="🎙️ Whisper 轉錄中") as pbar:
+            for seg in segments_gen:
+                words = []
+                if seg.words:
+                    words = [
+                        {
+                            "word": w.word,
+                            "start": w.start,
+                            "end": w.end,
+                            "probability": w.probability,
+                        }
+                        for w in seg.words
+                    ]
+                segments.append(TranscriptSegment(
+                    start=seg.start,
+                    end=seg.end,
+                    text=seg.text.strip(),
+                    words=words,
+                ))
+                # 更新進度條至當前片段結束時間
+                pbar.update(seg.end - pbar.n)
 
-        logger.info(
-            f"✅ Whisper 轉錄完成: {len(segments)} 個片段 | "
-            f"偵測語言={info.language} | "
-            f"語言機率={info.language_probability:.2%}"
-        )
+        logger.info(f"✅ Whisper 轉錄完成: {len(segments)} 個片段")
         return segments
 
     def _parse_json3_subtitle(self, subtitle_path: str | Path) -> list[TranscriptSegment]:
@@ -476,13 +421,12 @@ class YouTubeDownloader:
                 utf8 = seg.get("utf8", "")
                 if utf8.strip():
                     text_parts.append(utf8)
-                    # 提取逐字時間戳記（如果有的話）
                     seg_offset = seg.get("tOffsetMs", 0)
                     word_start = (base_offset + seg_offset) / 1000.0
                     words.append({
                         "word": utf8.strip(),
                         "start": word_start,
-                        "end": word_start + 0.5,  # 估計值
+                        "end": word_start + 0.5,
                         "probability": 1.0,
                     })
 
@@ -494,7 +438,6 @@ class YouTubeDownloader:
                     text=text,
                     words=words,
                 ))
-
         return segments
 
     def save_transcript(
@@ -503,7 +446,7 @@ class YouTubeDownloader:
         output_path: str | Path,
         metadata: dict | None = None,
     ) -> Path:
-        """儲存逐字稿為 JSON（含來源元數據）"""
+        """儲存逐字稿為 JSON"""
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -518,25 +461,14 @@ class YouTubeDownloader:
         return output_path
 
     def process_url(self, url: str) -> DownloadResult:
-        """
-        完整處理單一 URL：下載音訊 → 選擇最佳字幕策略 → 轉錄 → 儲存
-
-        Args:
-            url: YouTube 影片 URL
-
-        Returns:
-            DownloadResult 包含所有輸出路徑
-        """
+        """完整處理單一 URL"""
         result = self.download_audio(url)
-
-        # 轉錄（根據字幕來源自動選擇策略）
         segments = self.transcribe(
             result.audio_path,
             use_subtitle=result.subtitle_path,
             subtitle_source=result.subtitle_source,
         )
 
-        # 儲存逐字稿（含元數據）
         transcript_dir = self.output_dir / "transcripts"
         transcript_path = transcript_dir / f"{result.video_id}_transcript.json"
         self.save_transcript(
@@ -553,19 +485,10 @@ class YouTubeDownloader:
             },
         )
         result.transcript_path = transcript_path
-
         return result
 
     def process_url_list(self, url_list_path: str | Path) -> list[DownloadResult]:
-        """
-        批次處理 URL 清單
-
-        Args:
-            url_list_path: 文字檔案，每行一個 YouTube URL
-
-        Returns:
-            DownloadResult 列表
-        """
+        """批次處理 URL 清單"""
         url_list_path = Path(url_list_path)
         urls = [
             line.strip()
@@ -583,23 +506,13 @@ class YouTubeDownloader:
                 result = self.process_url(url)
                 results.append(result)
 
-                # 統計字幕來源
                 if result.has_manual_subs:
                     stats["manual"] += 1
                 elif result.subtitle_source == SubtitleSource.AUTO_CAPTION:
                     stats["auto"] += 1
                 else:
                     stats["whisper"] += 1
-
             except Exception as e:
                 logger.error(f"處理失敗: {url} — {e}")
                 stats["failed"] += 1
-
-        logger.info(
-            f"批次完成: {len(results)}/{len(urls)} 成功 | "
-            f"人工字幕: {stats['manual']} | "
-            f"自動字幕: {stats['auto']} | "
-            f"Whisper: {stats['whisper']} | "
-            f"失敗: {stats['failed']}"
-        )
         return results

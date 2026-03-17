@@ -201,32 +201,45 @@ class RewardModelTrainer:
         sorted_jokes = sorted(jokes, key=lambda j: j.get(score_key, 0), reverse=True)
 
         pairs = []
-        # 從高分與低分的配對中抽樣
         n = len(sorted_jokes)
         top_third = sorted_jokes[:n // 3]
+        mid_third = sorted_jokes[n // 3: 2 * n // 3]
         bottom_third = sorted_jokes[2 * n // 3:]
 
-        for chosen in top_third:
-            for rejected in bottom_third:
-                chosen_score = chosen.get(score_key, 0)
-                rejected_score = rejected.get(score_key, 0)
+        # 建構候選對：top-vs-bottom (60%) + top-vs-mid (25%) + mid-vs-bottom (15%)
+        # 讓 RM 在整個分數區間都有判斷力，避免只學極端差異
+        candidate_pools = [
+            (top_third, bottom_third, int(max_pairs * 0.60)),
+            (top_third, mid_third,    int(max_pairs * 0.25)),
+            (mid_third, bottom_third, int(max_pairs * 0.15)),
+        ]
 
-                if chosen_score - rejected_score >= min_score_diff:
-                    pairs.append(PreferencePair(
-                        prompt="以下是一段脫口秀段子：",
-                        chosen=chosen.get("full_text", ""),
-                        rejected=rejected.get("full_text", ""),
-                        chosen_score=chosen_score,
-                        rejected_score=rejected_score,
-                    ))
+        for chosen_pool, rejected_pool, pool_limit in candidate_pools:
+            # 隨機抽樣避免 O(n²) 遍歷
+            chosen_sample = random.sample(chosen_pool, min(len(chosen_pool), 200))
+            rejected_sample = random.sample(rejected_pool, min(len(rejected_pool), 200))
 
-                    if len(pairs) >= max_pairs:
+            for chosen in chosen_sample:
+                for rejected in rejected_sample:
+                    chosen_score = chosen.get(score_key, 0)
+                    rejected_score = rejected.get(score_key, 0)
+
+                    if chosen_score - rejected_score >= min_score_diff:
+                        pairs.append(PreferencePair(
+                            prompt="以下是一段脫口秀段子：",
+                            chosen=chosen.get("full_text", ""),
+                            rejected=rejected.get("full_text", ""),
+                            chosen_score=chosen_score,
+                            rejected_score=rejected_score,
+                        ))
+
+                    if len(pairs) >= pool_limit:
                         break
-            if len(pairs) >= max_pairs:
-                break
+                if len(pairs) >= pool_limit:
+                    break
 
         random.shuffle(pairs)
-        logger.info(f"建構偏好對: {len(pairs)} 對")
+        logger.info(f"建構偏好對: {len(pairs)} 對 (top-bottom / top-mid / mid-bottom 三層抽樣)")
         return pairs
 
     def train(
