@@ -179,6 +179,9 @@ class AutoAnnotationPipeline:
         candidates = []
 
         for i, joke in enumerate(aligned_jokes):
+            # 將 dataclass 轉為 dict（相容 SetupPunchline 與純 dict 兩種輸入）
+            if not isinstance(joke, dict):
+                joke = asdict(joke)
             # 1. 計算音訊分數
             audio_score = self._compute_audio_score(joke, laughter_events, audio_features)
 

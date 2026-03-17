@@ -102,14 +102,23 @@ def main():
              'confidence': e.confidence, 'event_class': e.event_class}
             for e in laughter_events
         ]
-        
+        print(f"  → 偵測到 {len(laughter_dicts)} 個笑聲事件 (未過濾)")
+        if laughter_dicts:
+            confs = [e['confidence'] for e in laughter_dicts]
+            print(f"  → confidence 分布: min={min(confs):.3f}, max={max(confs):.3f}, "
+                  f">=0.7: {sum(1 for c in confs if c>=0.7)}, >=0.5: {sum(1 for c in confs if c>=0.5)}")
+
 # 5. 音訊分析
         print("📊 分析音訊特徵...")
         audio_features = []
         # 使用 tqdm 包裝迴圈
         for e in tqdm(laughter_events, desc="分析中"):
             feat = audio_analyzer.analyze_segment(audio_path, e.start, e.end)
-            audio_features.append({'start': feat.start, 'end': feat.end, 'rms_db': feat.rms_db})            
+            audio_features.append({'start': feat.start, 'end': feat.end, 'rms_db': feat.rms_db})
+        if audio_features:
+            dbs = [f['rms_db'] for f in audio_features]
+            print(f"  → 音訊 rms_db 分布: min={min(dbs):.1f}, max={max(dbs):.1f}, "
+                  f">=-30dB: {sum(1 for d in dbs if d>=-30)}")
         # 6. 此處已省略影像分析
         video_reactions = None
             
